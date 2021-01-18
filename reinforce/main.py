@@ -8,7 +8,7 @@ MAX_STEPS = 200
 def main():
     env = gym.make("CartPole-v0")
     agent = Reinforce(env)
-    scores = agent.train(500, 200)
+    scores = agent.train(2000, 200)
     
 
 

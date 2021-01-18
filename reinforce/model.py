@@ -29,11 +29,11 @@ class PGN(Model):
         return x
     
     def take_action(self, state):
-        logits = self.call(state)
-        dist = tfp.distributions.Categorical(logits=logits)
+        prob = self.call(np.array([state]))
+        dist = tfp.distributions.Categorical(probs=prob, dtype=tf.float32)
         action = dist.sample()
-        log_prob = dist.log_prob(action)
-        return action.numpy()[0], log_prob
+        # log_prob = dist.log_prob(action)
+        return int(action.numpy()[0])
     
     
     

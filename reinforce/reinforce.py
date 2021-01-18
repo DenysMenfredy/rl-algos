@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from model import PGN
+import tensorflow_probability as tfp
 
 class Reinforce(object):
     def __init__(self, env):
@@ -15,36 +16,59 @@ class Reinforce(object):
         self.print_every = 10
         
     def discounted_rewards(self, rewards):
-        discounts = [self.gamma ** i for i in range(len(rewards) + 1)]
-        r_discounted = sum([a * b for a, b in zip(discounts, rewards)])
-        return r_discounted
+        discounted_rewards = []
+        sum_reward = 0
+        for reward in reversed(rewards):
+            sum_reward = reward + self.gamma * sum_reward
+            discounted_rewards.append(sum_reward)
+        return discounted_rewards.reverse()
     
-    def loss_fn(self, preds, r):
-        return -1 * tf.reduce_sum(r * tf.math.log(preds))
+    def loss_fn(self, prob, action, reward):
+        dist = tfp.distributions.Categorical(probs=prob, dtype=tf.float32)
+        log_prob = dist.log_prob(action)
+        return -log_prob * reward # -Q(s, a) * logPI(a/s)
     
+    
+    def update(self, states, actions, rewards):
+        # rewards = self.discounted_rewards(rewards)
+        
+        sum_reward = 0
+        discounted_rewards = []
+        for reward in reversed(rewards):
+            sum_reward = reward + self.gamma * sum_reward
+            discounted_rewards.append(sum_reward)
+        discounted_rewards.reverse()
+        
+        for state, action, reward in zip(states, actions, rewards):
+            with tf.GradientTape() as tape:
+                prob = self.network([state], training=True)
+                loss = self.loss_fn(prob, action, reward)
+                grads = tape.gradient(loss, self.network.trainable_variables)
+                self.optimizer.apply_gradients(zip(grads, self.network.trainable_variables))
     
     def train(self, max_episodes, max_steps):
         scores = []
         for ep in range(max_episodes):
             saved_log_probs = []
+            states = []
+            actions = []
             rewards = []
             state = self.env.reset()
             for t in range(max_steps):
-                action, log_prob = self.network.take_action(state)
+                action = self.network.take_action(state)
                 # print(action)
-                saved_log_probs.append(log_prob)
-                state, reward, done, _ = self.env.step(action)
+                # saved_log_probs.append(log_prob)
+                next_state, reward, done, _ = self.env.step(action)
+                states.append(state)
+                actions.append(action)
                 rewards.append(reward)
-                if done: break
+                state = next_state
+                if done: 
+                    break
             scores.append(sum(rewards))
-            discounted_rewards = self.discounted_rewards(rewards)
-            policy_loss = []
-            with tf.GradientTape() as tape:
-                for log_prob in saved_log_probs:
-                    policy_loss.append(-log_prob * discounted_rewards)
-                policy_loss = tf.reduce_sum(tf.concat(policy_loss, axis=0))
-            grads = tape.gradient(policy_loss, self.network.trainable_variables)
-            self.optimizer.apply_gradients(zip(grads, self.network.trainable_variables))
+            self.update(states, actions, rewards)
+            
+            # policy_loss = []
             
             if ep % self.print_every == 0:
                 print("Episode {}\tAverage Score: {:.2f}".format(ep, np.mean(scores)))
