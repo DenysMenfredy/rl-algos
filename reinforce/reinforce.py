@@ -76,6 +76,17 @@ class Reinforce(object):
                 print("Environment solved in {} episodes!\tAverage Score: {:.2f}".format(ep, np.mean(scores)))
                 break
         return scores
+    
+    
+    def play(self, episodes=100, steps=200):
+        for ep in range(episodes):
+            self.env.render()
+            state = self.env.reset()
+            for t in range(steps):
+                action = self.network.take_action(state)
+                next_state, reward, done, _ = self.env.step(action)
+                state = next_state
+                if done: break
         
         
 

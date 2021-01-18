@@ -3,7 +3,8 @@ import gym
 from reinforce import Reinforce
 import tensorflow as tf
 import matplotlib.pyplot as plt
-MAX_EPISODES = 500
+
+MAX_EPISODES = 5000
 MAX_STEPS = 200
 
 def plot_graphic(data):
