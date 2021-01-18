@@ -1,14 +1,25 @@
+import numpy as np
 import gym
 from reinforce import Reinforce
 import tensorflow as tf
-
+import matplotlib.pyplot as plt
 MAX_EPISODES = 500
 MAX_STEPS = 200
+
+def plot_graphic(data):
+    plt.plot(np.arange(len(data)), data)
+    plt.title("Reward per episode")
+    plt.xlabel("Episode")
+    plt.show()
+    
+    
 
 def main():
     env = gym.make("CartPole-v0")
     agent = Reinforce(env)
-    scores = agent.train(2000, 200)
+    scores = agent.train(MAX_EPISODES, MAX_STEPS)
+    print(len(scores))
+    plot_graphic(scores)
     
 
 
